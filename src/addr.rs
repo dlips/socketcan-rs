@@ -11,7 +11,7 @@
 
 //! SocketCAN address type.
 
-use libc::{sa_family_t, sockaddr, sockaddr_can, sockaddr_storage, socklen_t};
+use libc::{canid_t, sa_family_t, sockaddr, sockaddr_can, sockaddr_storage, socklen_t};
 use nix::net::if_::if_nametoindex;
 use socket2::SockAddr;
 use std::{fmt, io, mem, mem::size_of, os::raw::c_int};
@@ -41,10 +41,48 @@ impl CanAddr {
         addr
     }
 
+    /// Creates a new CAN J1939 socket address for the specified interface
+    /// by index.
+    pub fn new_j1939(ifindex: u32, name: u64, pgn: u32, jaddr: u8) -> Self {
+        let mut addr = Self::new(ifindex);
+        addr.0.can_addr.j1939.name = name;
+        addr.0.can_addr.j1939.pgn = pgn;
+        addr.0.can_addr.j1939.addr = jaddr;
+        addr
+    }
+
+    /// Creates a new CAN ISO-TP socket address for the specified interface
+    /// by index.
+    // TODO: Replace the canid_t with proper CanID type for ISO-TP
+    pub fn new_isotp(ifindex: u32, rx_id: canid_t, tx_id: canid_t) -> Self {
+        let mut addr = Self::new(ifindex);
+        addr.0.can_addr.tp.rx_id = rx_id;
+        addr.0.can_addr.tp.tx_id = tx_id;
+        addr
+    }
+
     /// Try to create an address from an interface name.
     pub fn from_iface(ifname: &str) -> io::Result<Self> {
         let ifindex = if_nametoindex(ifname)?;
         Ok(Self::new(ifindex))
+    }
+
+    /// Try to create a J1939 address from an interface name.
+    pub fn from_iface_j1939(ifname: &str, name: u64, pgn: u32, jaddr: u8) -> io::Result<Self> {
+        let mut addr = Self::from_iface(ifname)?;
+        addr.0.can_addr.j1939.name = name;
+        addr.0.can_addr.j1939.pgn = pgn;
+        addr.0.can_addr.j1939.addr = jaddr;
+        Ok(addr)
+    }
+
+    /// Try to create a ISO-TP address from an interface name.
+    // TODO: Replace the canid_t with proper CanID type for ISO-TP
+    pub fn from_iface_isotp(ifname: &str, rx_id: canid_t, tx_id: canid_t) -> io::Result<Self> {
+        let mut addr = Self::from_iface(ifname)?;
+        addr.0.can_addr.tp.rx_id = rx_id;
+        addr.0.can_addr.tp.tx_id = tx_id;
+        Ok(addr)
     }
 
     /// Gets the address of the structure as a `sockaddr_can` pointer.
