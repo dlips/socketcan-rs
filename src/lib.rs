@@ -164,6 +164,9 @@ pub mod enumerate;
 #[cfg(feature = "enumerate")]
 pub use enumerate::available_interfaces;
 
+#[cfg(feature = "j1939")]
+pub mod j1939;
+
 // ===== helper functions =====
 
 /// Gets a byte slice for any sized variable.
